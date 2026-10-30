@@ -7,6 +7,10 @@
  *   diagnoseGeo()          → logs which names match / do not match the GeoJSON
  *   diagnoseHospitals()    → confirms all 14 public hospitals have correct location
  *   installTriggers()      → 3-hourly cache rebuild + Monday email
+ *
+ * GITHUB PAGES MODE
+ *   doGet() returns JSON when called with ?api=1 (used by docs/index.html).
+ *   Optional Script Property API_TOKEN: if set, requests must pass ?token=...
  */
 const CFG = {
   histCsvId:      '1JAOtWf_cg1wWUBy3DkEG5I0JZND4lBAc',
@@ -50,18 +54,10 @@ const CFG = {
     'Zewditu Memorial General Hospital'
   ],
 
-  /* ──────────────────────────────────────────────────────────────
-   * OUTBREAK THRESHOLDS — PHEM Guideline (2nd ed., December 2022)
-   *  • Rabies — Table 4-1 (immediately reportable)
-   *             §04 “Immediate Reporting”: “a single suspected case
-   *             is considered as a suspected outbreak”.
-   *             → fixed threshold = 1.
-   *  • Relapsing fever — Table 4-5:
-   *             Alert/action = “Unusual increase of the cases
-   *             OR doubling of cases on subsequent weeks”.
-   *             → dynamic; enforced per woreda in buildData_ with a
-   *               floor of 2 cases to avoid flagging sporadic weeks.
-   * ────────────────────────────────────────────────────────────── */
+  /* OUTBREAK THRESHOLDS — PHEM Guideline (2nd ed., December 2022)
+   *  • Rabies — Table 4-1: single suspected case = suspected outbreak (min 1).
+   *  • Relapsing fever — Table 4-5: "unusual increase OR doubling of cases
+   *    on subsequent weeks"; floor of 2 cases per woreda. */
   outbreakRules: [
     { d: 'human_rabies',   key: 'human_rabies',   min: 1 },
     { d: 'relapsing_fever',key: 'relapsing_fever',min: 2, doubling: true }
@@ -183,7 +179,27 @@ const ICON_MAP = {
 };
 
 /* ============================ WEB ENTRY ============================ */
+/**
+ * ?api=1  → JSON API for the GitHub Pages front-end
+ * (default) → original Apps Script-served page (kept as fallback)
+ */
 function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.api === '1') {
+    const out = o => ContentService.createTextOutput(JSON.stringify(o))
+      .setMimeType(ContentService.MimeType.JSON);
+    try {
+      const tok = PropertiesService.getScriptProperties().getProperty('API_TOKEN');
+      if (tok && p.token !== tok) return out({ ok: false, error: 'Unauthorized' });
+      const year = +p.year || CFG.currentYear;
+      if (p.refresh === '1') refreshCache_(year);
+      const data = buildData_(year, +p.week || 0,
+        { subcity: p.subcity || '', woreda: p.woreda || '' }, p.assets === '1');
+      return out({ ok: true, data: data });
+    } catch (err) {
+      return out({ ok: false, error: err.message });
+    }
+  }
   try { return doGet_(e); } catch (err) {
     return HtmlService.createHtmlOutput('<pre style="font:14px monospace;color:#900;white-space:pre-wrap">Server error: ' +
       err.message + '\n' + (err.stack || '') + '</pre>');
@@ -676,26 +692,13 @@ function buildData_(year, week, filter, includeAssets) {
   const prevConsult  = CONSULT_KEYS.reduce((s, k) => s + sumK(prev, k), 0);
   const cn30 = sumK(cur, 'cn_30');
 
-  /* ════════════════════════════════════════════════════════════════
-   * OUTBREAK DETECTION — PHEM Guideline (2nd ed., Dec 2022)
-   *
-   *   outbreaks       → KPI "Active Outbreaks" + executive summary
-   *                     (only woredas that PASS the guideline threshold)
-   *
-   *   outbreakSignals → ALL woredas with any case > 0 (map source)
-   *
-   * Threshold rules:
-   *   • human_rabies   — Table 4-1 + §04 → single case = outbreak  (min:1)
-   *   • relapsing_fever— Table 4-5 → "doubling OR unusual increase"
-   *                       doubling  = this week ≥ 2 × last week
-   *                       unusual   = this week ≥ 2 × 4-week avg AND ≥ 2
-   *                       floor     = 2 (skip sporadic single-case weeks)
-   * ════════════════════════════════════════════════════════════════ */
+  /* OUTBREAK DETECTION — PHEM Guideline (2nd ed., Dec 2022)
+   *   outbreaks       → woredas that PASS the guideline threshold
+   *   outbreakSignals → ALL woredas with any case > 0 (map source) */
   const outbreaks       = [];
   const outbreakSignals = [];
 
   CFG.outbreakRules.forEach(R => {
-    // ---- this week's counts per (Sub-City || Woreda) ----
     const cur_m = {};
     cur.forEach(r => {
       const s = F[r.f].s || 'Unknown';
@@ -704,7 +707,6 @@ function buildData_(year, week, filter, includeAssets) {
       cur_m[key] = (cur_m[key] || 0) + V(r, R.key);
     });
 
-    // ---- signals (map) = any woreda with > 0 cases ----
     Object.keys(cur_m).forEach(k => {
       if (cur_m[k] > 0) {
         const parts = k.split('||');
@@ -712,9 +714,7 @@ function buildData_(year, week, filter, includeAssets) {
       }
     });
 
-    // ---- threshold logic ----
     if (R.doubling) {
-      // PHEM §Table 4-5: Relapsing Fever → "unusual increase OR doubling"
       const prev_m = {};
       prev.forEach(r => {
         const s = F[r.f].s || 'Unknown';
@@ -723,7 +723,6 @@ function buildData_(year, week, filter, includeAssets) {
         prev_m[key] = (prev_m[key] || 0) + V(r, R.key);
       });
 
-      // Rolling 4-week history per key (baseline for "unusual")
       const hist4 = {};
       for (let i = 1; i <= 4; i++) {
         const wk = week - i;
@@ -738,7 +737,7 @@ function buildData_(year, week, filter, includeAssets) {
 
       Object.keys(cur_m).forEach(k => {
         const c = cur_m[k];
-        if (c < R.min) return;                                    // floor = 2
+        if (c < R.min) return;
         const p  = prev_m[k] || 0;
         const h4 = (hist4[k] || 0) / 4;
 
@@ -753,7 +752,6 @@ function buildData_(year, week, filter, includeAssets) {
       return;
     }
 
-    // ---- fixed-threshold rule (e.g. human rabies: min = 1) ----
     Object.keys(cur_m).forEach(k => {
       if (cur_m[k] >= R.min) {
         const parts = k.split('||');
