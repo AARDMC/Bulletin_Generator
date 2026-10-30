@@ -8,16 +8,6 @@
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
 <style>
-/* =====================================================================
- * LAYOUT MODEL (single source of truth for screen, PDF and PPT)
- *   - Every .page is the SAME physical box in all three outputs:
- *     --page-w x --page-h (A4 width, 1 mm shorter than A4 height so the
- *     browser never spills a rounding sliver onto an extra blank page).
- *   - .page is a flex column:  header | body (flexible) | footer.
- *   - Inside .body, text blocks keep their natural size; charts and maps
- *     are the flexible items (.grow) – they absorb spare space or shrink
- *     to a minimum height when text grows. Fonts are never scaled.
- * ===================================================================== */
 :root{
   --navy:#123c73; --sky:#87bbdc; --sky-dark:#6aa3c8; --pale:#dde9f6;
   --red:#c8372d; --green:#2e8b57; --ink:#1f2a3a;
@@ -76,7 +66,7 @@ body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:
   display:flex;flex-direction:column;
   overflow:hidden;break-inside:avoid;page-break-inside:avoid}
 
-/* ============ Header — white 5% accent bar behind logo ============ */
+/* ============ Header ============ */
 .hd{position:relative;display:flex;align-items:center;gap:14px;background:var(--sky);
   padding:12px 18px;border-bottom:2px solid var(--sky-dark);flex:none}
 .hd::before{
@@ -95,11 +85,10 @@ body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:
 .hd small{color:var(--navy);font-weight:700;text-align:right;line-height:1.35}
 .hd.sm h1{font-size:22px}
 
-/* ============ Body — 20 mm left/right margins (SOP standard) ============ */
+/* ============ Body ============ */
 .body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
   padding:18px 76px 10px;overflow:hidden}
 .body > *{flex:none}
-/* Flexible regions (charts / maps). --b = preferred height, --m = minimum height */
 .body .grow{flex:1 1 var(--b,200px);min-height:var(--m,120px)}
 
 /* ============ KPI tiles ============ */
@@ -112,7 +101,7 @@ body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:
 .kpi i{position:absolute;right:10px;top:8px;font-style:normal;font-size:12px;font-weight:700}
 .up{color:var(--red)} .dn{color:var(--green)} .fl{color:#777}
 
-/* ============ Typography — justified body text ============ */
+/* ============ Typography ============ */
 h2{color:var(--navy);font-size:17px;margin:14px 0 6px;line-height:1.25}
 .body > h2:first-child{margin-top:0}
 h3{color:var(--navy);font-size:13px;margin:0 0 2px;text-transform:uppercase;letter-spacing:.02em}
@@ -125,7 +114,6 @@ ul.bullets li{margin:3px 0;line-height:1.55;font-size:13px;text-align:justify}
 
 /* ============ Layout ============ */
 .row{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-/* Flexible row: grid cells stretch to the row's height */
 .row.grow{align-items:stretch;grid-template-rows:minmax(0,1fr)}
 .row.grow > *{min-height:0;min-width:0}
 .col{display:flex;flex-direction:column;min-height:0;min-width:0}
@@ -136,7 +124,6 @@ ul.bullets li{margin:3px 0;line-height:1.55;font-size:13px;text-align:justify}
 .dis img{width:40px;height:40px;object-fit:contain}
 .dis h2{margin:0;font-size:20px}
 
-/* Disease block (charts + narrative) */
 .blk{flex:1 1 auto;display:flex;flex-direction:column}
 .blk + .blk{margin-top:14px}
 .blk .row.grow{margin-top:6px}
@@ -158,7 +145,7 @@ th{background:var(--sky);color:var(--navy);padding:7px;border:1px solid var(--li
 td{padding:6px;border:1px solid var(--line);text-align:center}
 tr.sub td{background:var(--pale);font-weight:700}
 
-/* ============ Footer — in flow, never overlaps the body ============ */
+/* ============ Footer ============ */
 .foot{flex:none;text-align:center;font-size:10px;color:#889;line-height:1.35;
   padding:6px 16px 8px}
 
@@ -186,8 +173,8 @@ tr.sub td{background:var(--pale);font-weight:700}
   padding:10px;font:13px/1.4 monospace;z-index:99;white-space:pre-wrap;
   max-height:40vh;overflow:auto;box-shadow:0 -2px 10px rgba(0,0,0,.15)}
 
-/* ============ Landscape layout (A4 landscape, same 6 pages) ============ */
-body.landscape{--page-w:1280px;--page-h:719px}   /* 16:9 widescreen (13.33 x 7.5 in) */
+/* ============ Landscape layout ============ */
+body.landscape{--page-w:1280px;--page-h:719px}
 .landscape .body{padding:12px 44px 6px}
 .landscape .hd{padding:8px 18px}
 .landscape h2{margin:10px 0 4px}
@@ -201,13 +188,12 @@ body.landscape{--page-w:1280px;--page-h:719px}   /* 16:9 widescreen (13.33 x 7.5
 .l2 .card:first-child{margin-top:0}
 .landscape .card{margin:6px 0;padding:6px 12px}
 .landscape .foot{padding:4px 16px 6px}
-/* landscape pages 3-4: the two disease blocks sit side by side, charts stacked */
 .l3{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:minmax(0,1fr);gap:24px}
 .l3 > .blk{min-height:0;min-width:0}
 .l3 > .blk + .blk{margin-top:0}
 .l3 .row.grow{grid-template-columns:1fr;grid-template-rows:repeat(2,minmax(0,1fr));gap:8px}
 
-/* ============ Print — identical page box, no trailing page break ============ */
+/* ============ Print ============ */
 @media print{
   html,body{background:#fff;margin:0;padding:0;height:auto}
   #app{padding:0;margin:0}
@@ -247,7 +233,7 @@ body.landscape{--page-w:1280px;--page-h:719px}   /* 16:9 widescreen (13.33 x 7.5
 <script>
 'use strict';
 
-const PAGE_COUNT = 6;   // bulletin is exactly 6 pages / 6 slides
+const PAGE_COUNT = 6;
 
 const showErr = m => {
   const e = document.getElementById('err');
@@ -259,10 +245,6 @@ window.onerror = (m,u,l) => showErr('JS error: ' + m + ' (line ' + l + ')');
 if (typeof Chart === 'undefined')
   showErr('Chart.js did not load (CDN blocked?) – tables render, charts do not.');
 
-/* ---- Layout: portrait (A4 210x297) | landscape (16:9 widescreen, 1280x720) | fullscreen ----
- * Full Screen uses the landscape pages, scaled to fill the browser window
- * (and asks the browser for real full-screen). Exports always use the
- * 16:9 landscape page in this mode, at 100 % scale.                       */
 let LAYOUT = 'portrait', ORIENT = 'portrait';
 try { const o = localStorage.getItem('epi_layout'); if (o === 'landscape' || o === 'portrait' || o === 'fullscreen') LAYOUT = o; } catch (e) {}
 function applyOrientation_() {
@@ -297,7 +279,17 @@ function setOrientation(v) {
 window.addEventListener('resize', () => { if (LAYOUT === 'fullscreen') applyFit_(); });
 applyOrientation_();
 
-let D = <?!= D ?>;
+/* ================= API CLIENT (GitHub Pages -> Apps Script) ================= */
+let D = null;
+const API_URL = 'https://script.google.com/macros/s/AKfycbzU3FOnIGWIbIpQavnfJY6S10QfuHpCGFob_4IfJXDawjA_tnIOD4mahAAGi13LIiYN/exec';
+const API_TOKEN = 'xcvpddanieldamtew091101getahunhilu';   // same value as the API_TOKEN script property, or leave empty
+function callApi(year, week, sub, wor, refresh, assets) {
+  const q = new URLSearchParams({ api: 1, year: year || 0, week: week || 0,
+    subcity: sub || '', woreda: wor || '', refresh: refresh ? 1 : 0,
+    assets: assets ? 1 : 0, token: API_TOKEN });
+  return fetch(API_URL + '?' + q.toString()).then(r => r.json());
+}
+
 const CHARTS = [];
 const NAVY = '#123c73';
 const YEAR_COLORS = {
@@ -390,13 +382,13 @@ function centroidOf(f, P) {
   return n ? [sx/n, sy/n] : null;
 }
 
-(function logGeoReport() {
+function logGeoReport() {
   try {
     const r = D && D.geoMap && D.geoMap.report;
     if (!r) return;
     (r.warn || []).forEach(w => console.warn('[geo] ' + w));
   } catch (e) {}
-})();
+}
 
 function joinList(arr) {
   if (arr.length === 0) return '';
@@ -481,13 +473,8 @@ function immediateNarrative(d, M) {
   return parts.join(' ');
 }
 
-/* ------------------------------------------------------------------
- * Layout guard: verifies page count and that every page body fits.
- * Charts/maps already flex; this only reports if text alone overflows.
- * ------------------------------------------------------------------ */
 function fitPages() {
   applyFit_();
-  // clear previous layout messages (re-render would otherwise duplicate them)
   const eb = document.getElementById('err');
   if (eb) {
     const keep = eb.textContent.split('\n').filter(l => l && l.indexOf('Layout:') !== 0);
@@ -497,13 +484,11 @@ function fitPages() {
   const pages = Array.from(document.querySelectorAll('#app .page'));
   if (pages.length !== PAGE_COUNT)
     showErr('Layout: expected ' + PAGE_COUNT + ' pages, found ' + pages.length + '.');
-  const MIN_PX = 10;   // narration text is never shrunk below 10 px (7.5 pt)
+  const MIN_PX = 10;
   pages.forEach((p, i) => {
     const b = p.querySelector('.body'); if (!b) return;
     let over = b.scrollHeight - b.clientHeight;
     if (over > 1) {
-      // Charts/maps are already at minimum height: shrink narration paragraphs
-      // just enough (1 % steps) for the page to fit, and no further.
       const els = Array.from(b.querySelectorAll('.txt, ul.bullets li'))
         .filter(e => !e.closest('.lg') && !e.closest('.ph'));
       els.forEach(e => { e.dataset.fs0 = parseFloat(getComputedStyle(e).fontSize); });
@@ -527,6 +512,7 @@ function resizeCharts() {
 
 function render() {
   CHARTS.splice(0).forEach(c => { try { c.destroy(); } catch (e) {} });
+  logGeoReport();
   const M = D.meta, ICONS = D.icons || {}, $ = s => document.querySelector(s);
 
   const arrow = p => !p
@@ -725,7 +711,6 @@ function render() {
     (ma.total ? ' and an increasing trend of malaria cases' : '') +
     (pn.total ? ', under-five severe pneumonia' : '') + '.';
 
-  /* Disease block: heading, two flexible charts, narrative */
   const block = (d, extraTxt) => `<div class="blk">
     <div class="dis">
       ${ICONS[d.key] ? `<img src="${ICONS[d.key]}" style="width:42px;height:42px" alt="">` : ''}
@@ -1055,14 +1040,14 @@ function updateWoredas(selected) {
 }
 function onYearChange() {
   const year = +document.getElementById('f-year').value;
-  google.script.run.withSuccessHandler(res => {
+  callApi(year, 0, '', '', false, false).then(res => {
     if (!res || !res.ok) { showErr('Year load failed: ' + (res && res.error || 'unknown')); return; }
     D.options = res.data.options;
     if (!D.icons) D.icons = res.data.icons;
     if (!D.geo || !D.geo.sub) D.geo = res.data.geo;
     if (res.data.geoMap) D.geoMap = res.data.geoMap;
     populateFilters();
-  }).getBulletin(year, 0, '', '', false);
+  }).catch(e => showErr('Year load failed: ' + e.message));
 }
 function applyFilters(refresh) {
   const year = +document.getElementById('f-year').value;
@@ -1070,8 +1055,8 @@ function applyFilters(refresh) {
   const subcity = document.getElementById('f-sub').value;
   const woreda = document.getElementById('f-wor').value;
   const ld = document.getElementById('loading'); ld.classList.add('on');
-  google.script.run
-    .withSuccessHandler(res => {
+  callApi(year, week, subcity, woreda, !!refresh, false)
+    .then(res => {
       ld.classList.remove('on');
       if (!res || !res.ok) { showErr('Server: ' + (res && res.error || 'unknown')); return; }
       const nd = res.data;
@@ -1083,8 +1068,7 @@ function applyFilters(refresh) {
       try { render(); } catch (e) { showErr('Render: ' + e.message); }
       populateFilters();
     })
-    .withFailureHandler(err => { ld.classList.remove('on'); showErr('Call failed: ' + err.message); })
-    .getBulletin(year, week, subcity, woreda, !!refresh);
+    .catch(err => { ld.classList.remove('on'); showErr('Call failed: ' + err.message); });
 }
 function resetFilters() {
   const o = D.options;
@@ -1095,11 +1079,6 @@ function resetFilters() {
   applyFilters(false);
 }
 
-/* ------------------------------------------------------------------
- * PDF: the page box is already A4-proportioned and print CSS uses the
- * same box, so print output == on-screen pages. Resize charts first so
- * the bitmaps match their final containers.
- * ------------------------------------------------------------------ */
 function savePDF() {
   const app = document.getElementById('app'); app.style.zoom = '';
   resizeCharts();
@@ -1115,16 +1094,7 @@ function doExport(kind) {
 document.addEventListener('click', () => { const l = document.getElementById('xlist'); if (l) l.classList.remove('on'); });
 
 /* ==================================================================
- * NATIVE, EDITABLE PPT EXPORT
- * The laid-out HTML pages are the single source of truth. Every element
- * is read back from the DOM (position, size, colour, font, text) and
- * re-created as a native PowerPoint object:
- *   text -> text boxes (runs keep bold/colour)   tables -> real tables
- *   charts -> native, data-editable charts       shapes/cards/KPIs -> shapes
- *   logo/icons -> pictures                        links -> hyperlinks
- * Maps are drawn as vector->picture (one picture per map).
- * Because positions come from the same layout the PDF uses, PPT slides
- * match PDF pages in both portrait and landscape.
+ * NATIVE, EDITABLE PPT EXPORT (unchanged)
  * ================================================================== */
 const EXP = {
   rgbHex(c) {
@@ -1217,7 +1187,7 @@ const EXP = {
     ctx.slide.addImage({ data: img.src, x: (x - ctx.pr.left) * ctx.s, y: (y - ctx.pr.top) * ctx.s, w: dw * ctx.s, h: dh * ctx.s });
   },
 
-  inline(ctx, el) {            // legends: text pieces, dots and icons placed exactly where the page shows them
+  inline(ctx, el) {
     const walk = n => {
       if (n.nodeType === 3) {
         const t = n.nodeValue.replace(/\s+/g, ' ').trim(); if (!t) return;
@@ -1301,14 +1271,13 @@ const EXP = {
         showLegend: true, legendPos: 'r', ...axT(sc.y, 'Val', 7), ...axT(sc.x, 'Cat', 7) });
       return;
     }
-    if (o.indexAxis === 'y') {        // horizontal bars: first label shown on top (PowerPoint plots bottom-up)
+    if (o.indexAxis === 'y') {
       const d = ds[0], lab = labels.slice().reverse(), val = (d.data || []).map(num).reverse();
       ctx.slide.addChart(ctx.pptx.charts.BAR, [{ name: title || 'Cases', labels: lab, values: val }],
         { ...base, barDir: 'bar', barGapWidthPct: 50, chartColors: [EXP.hex(d.backgroundColor)], showLegend: false,
           ...axT(sc.x, 'Val', 7) });
       return;
     }
-    // vertical grouped bars (+ green 80 % target line, as on the page)
     const bars = ds.map(d => ({ name: String(d.label), labels, values: (d.data || []).map(num) }));
     const line = [{ name: 'Target (80%)', labels, values: labels.map(() => 80) }];
     ctx.slide.addChart([
@@ -1395,7 +1364,7 @@ async function exportPPT() {
       return;
     }
     const LND = ORIENT === 'landscape';
-    const SLIDE_W = LND ? 13.333 : 210 / 25.4, SLIDE_H = LND ? 7.5 : 297 / 25.4;   // landscape = 16:9 widescreen, portrait = A4 (inches)
+    const SLIDE_W = LND ? 13.333 : 210 / 25.4, SLIDE_H = LND ? 7.5 : 297 / 25.4;
     const pptx = new PptxGenJS();
     pptx.defineLayout({ name: LND ? 'W_16x9' : 'A4_P', width: SLIDE_W, height: SLIDE_H });
     pptx.layout = LND ? 'W_16x9' : 'A4_P';
@@ -1429,12 +1398,15 @@ async function exportPPT() {
   }
 }
 
-try {
-  if (!D || !D.meta) { showErr('No data received. Check deployment / SUMMARY_ID.'); }
-  else {
-    render();
-    populateFilters();
-  }
-} catch (e) { showErr('Render error: ' + e.message); }
+/* ================= BOOTSTRAP: load data from Apps Script API ================= */
+(function boot() {
+  const ld = document.getElementById('loading'); ld.classList.add('on');
+  callApi(0, 0, '', '', false, true).then(res => {
+    ld.classList.remove('on');
+    if (!res || !res.ok) { showErr('Server: ' + (res && res.error || 'unknown')); return; }
+    D = res.data;
+    try { render(); populateFilters(); } catch (e) { showErr('Render error: ' + e.message); }
+  }).catch(e => { ld.classList.remove('on'); showErr('Load failed: ' + e.message); });
+})();
 </script>
 </body></html>
